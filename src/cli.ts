@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { resolve } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { createSnapshot } from './core/snapshot.js';
 import { previewUndo, executeUndo } from './core/undo.js';
@@ -9,7 +10,7 @@ import { startWatcher, getDaemonStatus, stopDaemon } from './daemon/watcher.js';
 import { initClaudeCode, initGeneric } from './init.js';
 
 const [, , command, ...args] = process.argv;
-const projectPath = resolve(args.find((a) => a.startsWith('--path='))?.replace('--path=', '') ?? '.');
+const projectPath = realpathSync(resolve(args.find((a) => a.startsWith('--path='))?.replace('--path=', '') ?? '.'));
 const trigger = (args.find((a) => a.startsWith('--trigger='))?.replace('--trigger=', '') ?? 'manual') as 'manual' | 'hook' | 'auto';
 
 function printLogo() {
