@@ -3,7 +3,7 @@ import { realpathSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { cowCloneDir } from './cow.js';
 import { loadIgnorePatterns } from './ignore.js';
-import { addSnapshot, getSnapshotDir, autoClean } from './store.js';
+import { addSnapshot, getSnapshotDir, autoClean, setHead } from './store.js';
 import type { Snapshot } from './types.js';
 
 /** Create a CoW snapshot of the project directory */
@@ -32,6 +32,7 @@ export function createSnapshot(
 
   addSnapshot(snapshot);
   autoClean(absPath, maxSnapshots);
+  setHead(absPath, null); // reset HEAD to latest on new snapshot
 
   return snapshot;
 }

@@ -74,6 +74,73 @@ export function removeSnapshot(id: string): void {
   saveAll(list.filter((s) => s.id !== id));
 }
 
+// ==================== HEAD pointer ====================
+
+function getHeadPath(): string {
+  return join(getStorageDir(), 'head.json');
+}
+
+function loadHeads(): Record<string, string | null> {
+  ensureStore();
+  const p = getHeadPath();
+  if (!existsSync(p)) return {};
+  const content = readFileSync(p, 'utf-8').trim();
+  if (!content) return {};
+  return JSON.parse(content);
+}
+
+function saveHeads(heads: Record<string, string | null>): void {
+  ensureStore();
+  writeFileSync(getHeadPath(), JSON.stringify(heads, null, 2));
+}
+
+/** Get HEAD snapshot ID for a project (null = at latest) */
+export function getHead(projectPath: string): string | null {
+  return loadHeads()[projectHash(projectPath)] ?? null;
+}
+
+/** Set HEAD to a specific snapshot ID (null = reset to latest) */
+export function setHead(projectPath: string, snapshotId: string | null): void {
+  const heads = loadHeads();
+  const key = projectHash(projectPath);
+  if (snapshotId === null) {
+    delete heads[key];
+  } else {
+    heads[key] = snapshotId;
+  }
+  saveHeads(heads);
+}
+
+/** Get the snapshot that HEAD points to, or the latest if HEAD is null */
+export function getHeadSnapshot(projectPath: string): Snapshot | undefined {
+  const headId = getHead(projectPath);
+  const list = getSnapshots(projectPath);
+  if (headId) {
+    return list.find((s) => s.id === headId);
+  }
+  return list[list.length - 1];
+}
+
+/** Move HEAD back by N steps from current HEAD position. Return the target snapshot. */
+export function moveHeadBack(projectPath: string, steps = 1): Snapshot | undefined {
+  const list = getSnapshots(projectPath);
+  if (list.length === 0) return undefined;
+
+  const headId = getHead(projectPath);
+  let currentIndex = list.length - 1; // default: at latest
+  if (headId) {
+    const idx = list.findIndex((s) => s.id === headId);
+    if (idx >= 0) currentIndex = idx;
+  }
+
+  const targetIndex = currentIndex - steps;
+  if (targetIndex < 0) return undefined;
+
+  const target = list[targetIndex];
+  setHead(projectPath, target.id);
+  return target;
+}
+
 /** Auto-clean: keep only the latest N snapshots for a project */
 export function autoClean(projectPath: string, maxSnapshots: number): number {
   const list = getSnapshots(projectPath);

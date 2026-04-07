@@ -75,11 +75,10 @@ async function main() {
     }
 
     case 'undo': {
-      const n = parseInt(args[0]) || 1;
-      const result = previewUndo(projectPath, n);
+      const result = previewUndo(projectPath);
 
       if (!result) {
-        console.log('[cowback] No snapshots to undo to. Run `cowback on` first.');
+        console.log('[cowback] Already at oldest snapshot. Nothing to undo.');
         break;
       }
 
@@ -125,8 +124,8 @@ async function main() {
         break;
       }
 
-      executeUndo(projectPath, n);
-      console.log('[cowback] Done! Project restored.');
+      executeUndo(projectPath);
+      console.log('[cowback] Done! Project restored. Run `cowback undo` again to go further back.');
       break;
     }
 
@@ -157,8 +156,7 @@ async function main() {
     }
 
     case 'diff': {
-      const n = parseInt(args[0]) || 1;
-      const result = previewUndo(projectPath, n);
+      const result = previewUndo(projectPath);
       if (!result) {
         console.log('[cowback] No snapshots.');
         break;

@@ -3,8 +3,25 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { cowRestoreDir, getAllFiles } from './cow.js';
 import { loadIgnorePatterns } from './ignore.js';
-import { getNthSnapshot } from './store.js';
+import { moveHeadBack, getHead, getSnapshots } from './store.js';
 import type { Snapshot, UndoPreview } from './types.js';
+
+/** Get the snapshot that undo would restore to (one step back from HEAD) */
+function getUndoTarget(projectPath: string): Snapshot | undefined {
+  const list = getSnapshots(projectPath);
+  if (list.length === 0) return undefined;
+
+  const headId = getHead(projectPath);
+  let currentIndex = list.length - 1;
+  if (headId) {
+    const idx = list.findIndex((s) => s.id === headId);
+    if (idx >= 0) currentIndex = idx;
+  }
+
+  const targetIndex = currentIndex - 1;
+  if (targetIndex < 0) return undefined;
+  return list[targetIndex];
+}
 
 /** Fast file comparison: first check size, then hash content */
 function filesEqual(pathA: string, pathB: string): boolean {
@@ -23,8 +40,8 @@ function filesEqual(pathA: string, pathB: string): boolean {
 }
 
 /** Preview what undo will do, without actually doing it */
-export function previewUndo(projectPath: string, n = 1): { snapshot: Snapshot; preview: UndoPreview } | null {
-  const snapshot = getNthSnapshot(projectPath, n);
+export function previewUndo(projectPath: string): { snapshot: Snapshot; preview: UndoPreview } | null {
+  const snapshot = getUndoTarget(projectPath);
   if (!snapshot) return null;
 
   const ignorePatterns = loadIgnorePatterns(projectPath);
@@ -62,8 +79,8 @@ export function previewUndo(projectPath: string, n = 1): { snapshot: Snapshot; p
 }
 
 /** Execute undo: restore project to snapshot state */
-export function executeUndo(projectPath: string, n = 1, removeNewFiles = true): Snapshot | null {
-  const snapshot = getNthSnapshot(projectPath, n);
+export function executeUndo(projectPath: string, removeNewFiles = true): Snapshot | null {
+  const snapshot = moveHeadBack(projectPath);
   if (!snapshot || !existsSync(snapshot.snapshotPath)) return null;
 
   const ignorePatterns = loadIgnorePatterns(projectPath);
