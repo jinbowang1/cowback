@@ -40,13 +40,21 @@ export function cowCloneDir(
       mkdirSync(dstPath, { recursive: true }); // preserve empty dirs
       fileCount += cowCloneDir(srcPath, dstPath, ignorePatterns, basePath);
     } else if (entry.isFile()) {
-      copyFileSync(srcPath, dstPath, constants.COPYFILE_FICLONE);
-      fileCount++;
+      try {
+        copyFileSync(srcPath, dstPath, constants.COPYFILE_FICLONE);
+        fileCount++;
+      } catch {
+        // Skip files that can't be copied (sockets, special files, permission denied)
+      }
     } else if (entry.isSymbolicLink()) {
-      // Copy symlinks as regular files
-      copyFileSync(srcPath, dstPath, constants.COPYFILE_FICLONE);
-      fileCount++;
+      try {
+        copyFileSync(srcPath, dstPath, constants.COPYFILE_FICLONE);
+        fileCount++;
+      } catch {
+        // Skip broken symlinks
+      }
     }
+    // Skip sockets, FIFOs, block/char devices — not copyable
   }
 
   return fileCount;

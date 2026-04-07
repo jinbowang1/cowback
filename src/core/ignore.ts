@@ -10,6 +10,11 @@ const BUILTIN_IGNORE = [
   '.env',
   '.DS_Store',
   '.cowback',
+  '.bun',
+  '.npm',
+  '.cache',
+  '.Trash',
+  'Library',
 ];
 
 export function loadIgnorePatterns(projectPath: string): string[] {
