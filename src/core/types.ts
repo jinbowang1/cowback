@@ -15,8 +15,9 @@ export interface Snapshot {
 }
 
 export interface UndoPreview {
-  restored: string[];   // files that will be restored (modified/deleted)
-  removed: string[];    // files that will be removed (created after snapshot)
+  modified: string[];   // files that exist but content changed
+  deleted: string[];    // files that were deleted after snapshot
+  added: string[];      // new files created after snapshot (will be removed on undo)
   unchanged: string[];  // files that haven't changed
 }
 

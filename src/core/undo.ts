@@ -31,9 +31,10 @@ export function previewUndo(projectPath: string, n = 1): { snapshot: Snapshot; p
   const currentFiles = new Set(getAllFiles(projectPath, projectPath, ignorePatterns));
   const snapshotFiles = new Set(getAllFiles(snapshot.snapshotPath, snapshot.snapshotPath));
 
-  const restored: string[] = [];  // files that actually changed or were deleted
-  const removed: string[] = [];   // new files to remove
-  const unchanged: string[] = []; // files that haven't changed
+  const modified: string[] = [];  // content changed
+  const deleted: string[] = [];   // file deleted after snapshot
+  const added: string[] = [];     // new file created after snapshot
+  const unchanged: string[] = [];
 
   // Files in snapshot
   for (const f of snapshotFiles) {
@@ -43,22 +44,21 @@ export function previewUndo(projectPath: string, n = 1): { snapshot: Snapshot; p
       if (filesEqual(currentPath, snapPath)) {
         unchanged.push(f);
       } else {
-        restored.push(f);
+        modified.push(f);
       }
     } else {
-      // File was deleted after snapshot
-      restored.push(f);
+      deleted.push(f);
     }
   }
 
   // Files only in current: created after snapshot
   for (const f of currentFiles) {
     if (!snapshotFiles.has(f)) {
-      removed.push(f);
+      added.push(f);
     }
   }
 
-  return { snapshot, preview: { restored, removed, unchanged } };
+  return { snapshot, preview: { modified, deleted, added, unchanged } };
 }
 
 /** Execute undo: restore project to snapshot state */
@@ -70,11 +70,11 @@ export function executeUndo(projectPath: string, n = 1, removeNewFiles = true): 
 
   // If removeNewFiles, delete files that didn't exist in the snapshot
   if (removeNewFiles) {
-    const currentFiles = getAllFiles(projectPath, projectPath, ignorePatterns);
-    const snapshotFiles = new Set(getAllFiles(snapshot.snapshotPath, snapshot.snapshotPath));
+    const currentFileList = getAllFiles(projectPath, projectPath, ignorePatterns);
+    const snapshotFileSet = new Set(getAllFiles(snapshot.snapshotPath, snapshot.snapshotPath));
 
-    for (const f of currentFiles) {
-      if (!snapshotFiles.has(f)) {
+    for (const f of currentFileList) {
+      if (!snapshotFileSet.has(f)) {
         const fullPath = join(projectPath, f);
         rmSync(fullPath, { force: true });
       }

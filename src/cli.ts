@@ -89,18 +89,23 @@ async function main() {
       if (snapshot.label) console.log(`  Label: ${snapshot.label}`);
       console.log('');
 
-      if (preview.restored.length > 0) {
-        console.log(`  Restore: ${preview.restored.length} files`);
-        for (const f of preview.restored.slice(0, 10)) console.log(`    ← ${f}`);
-        if (preview.restored.length > 10) console.log(`    ... and ${preview.restored.length - 10} more`);
+      if (preview.modified.length > 0) {
+        console.log(`  Revert:  ${preview.modified.length} modified files`);
+        for (const f of preview.modified.slice(0, 10)) console.log(`    M  ${f}`);
+        if (preview.modified.length > 10) console.log(`    ... and ${preview.modified.length - 10} more`);
       }
-      if (preview.removed.length > 0) {
-        console.log(`  Remove:  ${preview.removed.length} files (created after snapshot)`);
-        for (const f of preview.removed.slice(0, 10)) console.log(`    ✕ ${f}`);
-        if (preview.removed.length > 10) console.log(`    ... and ${preview.removed.length - 10} more`);
+      if (preview.deleted.length > 0) {
+        console.log(`  Recover: ${preview.deleted.length} deleted files`);
+        for (const f of preview.deleted.slice(0, 10)) console.log(`    D  ${f}`);
+        if (preview.deleted.length > 10) console.log(`    ... and ${preview.deleted.length - 10} more`);
+      }
+      if (preview.added.length > 0) {
+        console.log(`  Remove:  ${preview.added.length} new files (created after snapshot)`);
+        for (const f of preview.added.slice(0, 10)) console.log(`    +  ${f}`);
+        if (preview.added.length > 10) console.log(`    ... and ${preview.added.length - 10} more`);
       }
 
-      if (preview.restored.length === 0 && preview.removed.length === 0) {
+      if (preview.modified.length === 0 && preview.deleted.length === 0 && preview.added.length === 0) {
         console.log('  No changes to undo.');
         break;
       }
@@ -160,11 +165,13 @@ async function main() {
       }
       const { snapshot, preview } = result;
       console.log(`[cowback] Changes since: ${snapshot.id} (${formatAgo(snapshot.timestamp)})`);
-      console.log(`  ${preview.restored.length} modified/deleted, ${preview.removed.length} new, ${preview.unchanged.length} unchanged`);
+      const total = preview.modified.length + preview.deleted.length + preview.added.length;
+      console.log(`  ${total} changes (${preview.modified.length} modified, ${preview.deleted.length} deleted, ${preview.added.length} new), ${preview.unchanged.length} unchanged`);
       console.log('');
-      for (const f of preview.restored) console.log(`  M  ${f}`);
-      for (const f of preview.removed) console.log(`  +  ${f}`);
-      if (preview.restored.length === 0 && preview.removed.length === 0) {
+      for (const f of preview.modified) console.log(`  M  ${f}`);
+      for (const f of preview.deleted) console.log(`  D  ${f}`);
+      for (const f of preview.added) console.log(`  +  ${f}`);
+      if (total === 0) {
         console.log('  (no changes)');
       }
       break;

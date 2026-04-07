@@ -36,9 +36,9 @@ describe('previewUndo', () => {
 
     const result = previewUndo(TEST_DIR);
     expect(result).not.toBeNull();
-    expect(result!.preview.restored).toContain('a.txt');  // deleted → needs restore
+    expect(result!.preview.deleted).toContain('a.txt');    // deleted → needs recover
     expect(result!.preview.unchanged).toContain('b.txt'); // not changed → unchanged
-    expect(result!.preview.removed).toContain('c.txt');   // new file → remove
+    expect(result!.preview.added).toContain('c.txt');     // new file → remove
   });
 });
 
