@@ -1,6 +1,18 @@
-import { existsSync, rmSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, rmSync, readFileSync, statSync, writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
+
+const LOCK_FILE = join(homedir(), '.cowback', 'undo.lock');
+
+function acquireLock() {
+  mkdirSync(join(homedir(), '.cowback'), { recursive: true });
+  writeFileSync(LOCK_FILE, String(Date.now()));
+}
+
+function releaseLock() {
+  try { unlinkSync(LOCK_FILE); } catch {}
+}
 import { cowRestoreDir, getAllFiles } from './cow.js';
 import { loadIgnorePatterns } from './ignore.js';
 import { moveHeadBack, getHead, getSnapshots, getHeadSnapshot } from './store.js';
@@ -96,20 +108,27 @@ export function executeUndo(projectPath: string, removeNewFiles = true): Snapsho
   const snapshot = moveHeadBack(projectPath);
   if (!snapshot || !existsSync(snapshot.snapshotPath)) return null;
 
-  const ignorePatterns = loadIgnorePatterns(projectPath);
+  // Lock: tell daemon to ignore file changes during restore
+  acquireLock();
+  try {
+    const ignorePatterns = loadIgnorePatterns(projectPath);
 
-  if (removeNewFiles) {
-    const currentFileList = getAllFiles(projectPath, projectPath, ignorePatterns);
-    const snapshotFileSet = new Set(getAllFiles(snapshot.snapshotPath, snapshot.snapshotPath));
+    if (removeNewFiles) {
+      const currentFileList = getAllFiles(projectPath, projectPath, ignorePatterns);
+      const snapshotFileSet = new Set(getAllFiles(snapshot.snapshotPath, snapshot.snapshotPath));
 
-    for (const f of currentFileList) {
-      if (!snapshotFileSet.has(f)) {
-        const fullPath = join(projectPath, f.endsWith('/') ? f.slice(0, -1) : f);
-        rmSync(fullPath, { recursive: true, force: true });
+      for (const f of currentFileList) {
+        if (!snapshotFileSet.has(f)) {
+          const fullPath = join(projectPath, f.endsWith('/') ? f.slice(0, -1) : f);
+          rmSync(fullPath, { recursive: true, force: true });
+        }
       }
     }
+
+    cowRestoreDir(snapshot.snapshotPath, projectPath);
+  } finally {
+    releaseLock();
   }
 
-  cowRestoreDir(snapshot.snapshotPath, projectPath);
   return snapshot;
 }

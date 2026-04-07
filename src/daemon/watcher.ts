@@ -6,6 +6,7 @@ import { loadIgnorePatterns, shouldIgnore } from '../core/ignore.js';
 
 const PID_FILE = join(homedir(), '.cowback', 'daemon.pid');
 const LOG_FILE = join(homedir(), '.cowback', 'daemon.log');
+const LOCK_FILE = join(homedir(), '.cowback', 'undo.lock');
 
 function log(msg: string) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
@@ -38,12 +39,16 @@ export function startWatcher(projectPath: string, quietPeriodMs = 30_000, maxSna
     const fullPath = join(projectPath, filename);
     if (shouldIgnore(fullPath, projectPath, ignorePatterns)) return;
 
+    // Skip changes caused by undo operations
+    if (existsSync(LOCK_FILE)) return;
+
     changeCount++;
 
     // Reset quiet timer on every change
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       if (changeCount === 0) return;
+      if (existsSync(LOCK_FILE)) { changeCount = 0; return; }
       log(`${changeCount} file changes detected, creating snapshot...`);
       try {
         const snap = createSnapshot(projectPath, 'auto', `auto: ${changeCount} changes`, maxSnapshots);
