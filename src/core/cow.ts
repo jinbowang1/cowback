@@ -37,6 +37,7 @@ export function cowCloneDir(
     if (shouldIgnore(srcPath, basePath, ignorePatterns)) continue;
 
     if (entry.isDirectory()) {
+      mkdirSync(dstPath, { recursive: true }); // preserve empty dirs
       fileCount += cowCloneDir(srcPath, dstPath, ignorePatterns, basePath);
     } else if (entry.isFile()) {
       copyFileSync(srcPath, dstPath, constants.COPYFILE_FICLONE);
@@ -70,7 +71,7 @@ export function cowRestoreDir(snapshotDir: string, projectDir: string): void {
   }
 }
 
-/** Get all files in a directory recursively (relative paths) */
+/** Get all files and empty directories recursively (relative paths) */
 export function getAllFiles(dir: string, basePath: string = dir, ignorePatterns: string[] = []): string[] {
   if (!existsSync(dir)) return [];
   const files: string[] = [];
@@ -81,7 +82,13 @@ export function getAllFiles(dir: string, basePath: string = dir, ignorePatterns:
     if (shouldIgnore(fullPath, basePath, ignorePatterns)) continue;
 
     if (entry.isDirectory()) {
-      files.push(...getAllFiles(fullPath, basePath, ignorePatterns));
+      const children = getAllFiles(fullPath, basePath, ignorePatterns);
+      if (children.length === 0) {
+        // Empty directory — track it with trailing /
+        files.push(relative(basePath, fullPath) + '/');
+      } else {
+        files.push(...children);
+      }
     } else {
       files.push(relative(basePath, fullPath));
     }

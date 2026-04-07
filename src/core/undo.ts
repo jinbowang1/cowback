@@ -56,12 +56,17 @@ export function previewUndo(projectPath: string): { snapshot: Snapshot; preview:
   // Files in snapshot
   for (const f of snapshotFiles) {
     if (currentFiles.has(f)) {
-      const currentPath = join(projectPath, f);
-      const snapPath = join(snapshot.snapshotPath, f);
-      if (filesEqual(currentPath, snapPath)) {
+      if (f.endsWith('/')) {
+        // Empty directory — exists in both, unchanged
         unchanged.push(f);
       } else {
-        modified.push(f);
+        const currentPath = join(projectPath, f);
+        const snapPath = join(snapshot.snapshotPath, f);
+        if (filesEqual(currentPath, snapPath)) {
+          unchanged.push(f);
+        } else {
+          modified.push(f);
+        }
       }
     } else {
       deleted.push(f);
@@ -92,8 +97,8 @@ export function executeUndo(projectPath: string, removeNewFiles = true): Snapsho
 
     for (const f of currentFileList) {
       if (!snapshotFileSet.has(f)) {
-        const fullPath = join(projectPath, f);
-        rmSync(fullPath, { force: true });
+        const fullPath = join(projectPath, f.endsWith('/') ? f.slice(0, -1) : f);
+        rmSync(fullPath, { recursive: true, force: true });
       }
     }
   }

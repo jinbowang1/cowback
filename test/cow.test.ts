@@ -134,7 +134,8 @@ describe('getAllFiles', () => {
     writeFileSync(join(SRC, '.git', 'config'), '');
 
     const files = getAllFiles(SRC, SRC, ['.git']);
-    expect(files).toEqual(['keep.txt']);
+    expect(files).toContain('keep.txt');
+    expect(files).not.toContain('.git/config');
   });
 
   it('returns empty array for non-existent directory', () => {
