@@ -66,19 +66,24 @@ export function previewDiff(projectPath: string): { snapshot: Snapshot; preview:
   return { snapshot, preview };
 }
 
-/** Preview what undo will do: current state vs the snapshot BEFORE HEAD */
+/** Preview what undo will do: current state vs the undo target snapshot */
 export function previewUndo(projectPath: string): { snapshot: Snapshot; preview: UndoPreview } | null {
   const list = getSnapshots(projectPath);
   if (list.length === 0) return null;
 
   const headId = getHead(projectPath);
-  let currentIndex = list.length - 1;
+  let targetIndex: number;
+
   if (headId) {
+    // HEAD is set → already undone before, go one more step back
     const idx = list.findIndex((s) => s.id === headId);
-    if (idx >= 0) currentIndex = idx;
+    if (idx < 0) return null;
+    targetIndex = idx - 1;
+  } else {
+    // HEAD is null → at current state, undo to latest snapshot
+    targetIndex = list.length - 1;
   }
 
-  const targetIndex = currentIndex - 1;
   if (targetIndex < 0) return null;
 
   const target = list[targetIndex];

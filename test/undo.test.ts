@@ -66,11 +66,14 @@ describe('previewUndo', () => {
     expect(previewUndo(TEST_DIR)).toBeNull();
   });
 
-  it('returns null with only one snapshot (nothing to go back to)', () => {
-    writeFileSync(join(TEST_DIR, 'a.txt'), 'hello');
+  it('works with one snapshot (undo to it)', () => {
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'original');
     createSnapshot(TEST_DIR, 'manual', 'only one', 999);
-    // HEAD is at latest (the only snapshot), undo target = index -1 = nothing
-    expect(previewUndo(TEST_DIR)).toBeNull();
+
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'changed');
+    const result = previewUndo(TEST_DIR);
+    expect(result).not.toBeNull();
+    expect(result!.preview.modified).toContain('a.txt');
   });
 
   it('shows files to restore and remove', () => {
@@ -78,12 +81,10 @@ describe('previewUndo', () => {
     writeFileSync(join(TEST_DIR, 'b.txt'), 'keep');
     createSnapshot(TEST_DIR, 'manual', 'snap1', 999);
 
-    // Make changes and snapshot again
+    // Make changes (no new snapshot — undo should go back to snap1)
     rmSync(join(TEST_DIR, 'a.txt'));
     writeFileSync(join(TEST_DIR, 'c.txt'), 'new junk');
-    createSnapshot(TEST_DIR, 'manual', 'snap2', 999);
 
-    // Now undo should go from snap2 → snap1
     const result = previewUndo(TEST_DIR);
     expect(result).not.toBeNull();
     expect(result!.preview.deleted).toContain('a.txt');
@@ -93,19 +94,13 @@ describe('previewUndo', () => {
 });
 
 describe('executeUndo', () => {
-  it('restores to previous snapshot', () => {
-    writeFileSync(join(TEST_DIR, 'a.txt'), 'v1');
+  it('single snapshot: undo restores to it', () => {
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'original');
     createSnapshot(TEST_DIR, 'manual', 'snap1', 999);
 
-    writeFileSync(join(TEST_DIR, 'a.txt'), 'v2');
-    createSnapshot(TEST_DIR, 'manual', 'snap2', 999);
-
-    writeFileSync(join(TEST_DIR, 'a.txt'), 'v3');
-    createSnapshot(TEST_DIR, 'manual', 'snap3', 999);
-
-    // undo → should restore to snap2 (v2)
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'broken');
     executeUndo(TEST_DIR);
-    expect(readFileSync(join(TEST_DIR, 'a.txt'), 'utf-8')).toBe('v2');
+    expect(readFileSync(join(TEST_DIR, 'a.txt'), 'utf-8')).toBe('original');
   });
 
   it('consecutive undos go further back', () => {
@@ -118,11 +113,17 @@ describe('executeUndo', () => {
     writeFileSync(join(TEST_DIR, 'a.txt'), 'v3');
     createSnapshot(TEST_DIR, 'manual', 'snap3', 999);
 
-    // First undo → snap2 (v2)
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'v4-broken');
+
+    // First undo → snap3 (v3)
+    executeUndo(TEST_DIR);
+    expect(readFileSync(join(TEST_DIR, 'a.txt'), 'utf-8')).toBe('v3');
+
+    // Second undo → snap2 (v2)
     executeUndo(TEST_DIR);
     expect(readFileSync(join(TEST_DIR, 'a.txt'), 'utf-8')).toBe('v2');
 
-    // Second undo → snap1 (v1)
+    // Third undo → snap1 (v1)
     executeUndo(TEST_DIR);
     expect(readFileSync(join(TEST_DIR, 'a.txt'), 'utf-8')).toBe('v1');
   });
@@ -130,9 +131,6 @@ describe('executeUndo', () => {
   it('returns null when already at oldest snapshot', () => {
     writeFileSync(join(TEST_DIR, 'a.txt'), 'v1');
     createSnapshot(TEST_DIR, 'manual', 'snap1', 999);
-
-    writeFileSync(join(TEST_DIR, 'a.txt'), 'v2');
-    createSnapshot(TEST_DIR, 'manual', 'snap2', 999);
 
     executeUndo(TEST_DIR); // → snap1
     expect(executeUndo(TEST_DIR)).toBeNull(); // can't go further
@@ -160,7 +158,6 @@ describe('executeUndo', () => {
     createSnapshot(TEST_DIR, 'manual', 'snap1', 999);
 
     writeFileSync(join(TEST_DIR, 'junk.txt'), 'agent created this');
-    createSnapshot(TEST_DIR, 'manual', 'snap2', 999);
 
     executeUndo(TEST_DIR, true);
     expect(existsSync(join(TEST_DIR, 'original.txt'))).toBe(true);
@@ -172,7 +169,6 @@ describe('executeUndo', () => {
     createSnapshot(TEST_DIR, 'manual', 'snap1', 999);
 
     writeFileSync(join(TEST_DIR, 'new.txt'), 'keep this too');
-    createSnapshot(TEST_DIR, 'manual', 'snap2', 999);
 
     executeUndo(TEST_DIR, false);
     expect(existsSync(join(TEST_DIR, 'new.txt'))).toBe(true);
@@ -182,7 +178,7 @@ describe('executeUndo', () => {
     expect(executeUndo(TEST_DIR)).toBeNull();
   });
 
-  it('full e2e: snapshot → destroy → snapshot → undo', () => {
+  it('full e2e: snapshot → destroy → undo', () => {
     mkdirSync(join(TEST_DIR, 'src'), { recursive: true });
     writeFileSync(join(TEST_DIR, 'src', 'index.ts'), 'export const main = () => {}');
     writeFileSync(join(TEST_DIR, 'src', 'utils.ts'), 'export const helper = () => {}');
@@ -193,9 +189,8 @@ describe('executeUndo', () => {
     rmSync(join(TEST_DIR, 'src'), { recursive: true });
     writeFileSync(join(TEST_DIR, 'package.json'), 'BROKEN');
     writeFileSync(join(TEST_DIR, 'garbage.tmp'), 'agent junk');
-    createSnapshot(TEST_DIR, 'manual', 'after agent', 999);
 
-    // Undo
+    // Undo — goes back to "before agent" snapshot
     executeUndo(TEST_DIR);
 
     // Verify full recovery

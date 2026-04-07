@@ -121,19 +121,24 @@ export function getHeadSnapshot(projectPath: string): Snapshot | undefined {
   return list[list.length - 1];
 }
 
-/** Move HEAD back by N steps from current HEAD position. Return the target snapshot. */
-export function moveHeadBack(projectPath: string, steps = 1): Snapshot | undefined {
+/** Move HEAD back one step. Return the target snapshot to restore to. */
+export function moveHeadBack(projectPath: string): Snapshot | undefined {
   const list = getSnapshots(projectPath);
   if (list.length === 0) return undefined;
 
   const headId = getHead(projectPath);
-  let currentIndex = list.length - 1; // default: at latest
+  let targetIndex: number;
+
   if (headId) {
+    // Already undone before → go one more step back
     const idx = list.findIndex((s) => s.id === headId);
-    if (idx >= 0) currentIndex = idx;
+    if (idx < 0) return undefined;
+    targetIndex = idx - 1;
+  } else {
+    // At current state → undo to latest snapshot
+    targetIndex = list.length - 1;
   }
 
-  const targetIndex = currentIndex - steps;
   if (targetIndex < 0) return undefined;
 
   const target = list[targetIndex];
