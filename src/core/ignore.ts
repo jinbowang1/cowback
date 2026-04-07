@@ -30,8 +30,14 @@ export function loadIgnorePatterns(projectPath: string): string[] {
 
 export function shouldIgnore(filePath: string, projectPath: string, patterns: string[]): boolean {
   const rel = relative(projectPath, filePath);
+  const basename = rel.split('/').pop() ?? '';
   return patterns.some((p) => {
     const clean = p.replace(/\/$/, '');
+    // Glob pattern (e.g. *.pyc)
+    if (clean.startsWith('*')) {
+      const ext = clean.slice(1); // ".pyc"
+      return basename.endsWith(ext);
+    }
     // Match directory prefix or exact file
     return rel === clean || rel.startsWith(clean + '/') || rel.endsWith(clean);
   });

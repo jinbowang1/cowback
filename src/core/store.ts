@@ -32,7 +32,9 @@ function loadAll(): Snapshot[] {
   ensureStore();
   const db = getDbPath();
   if (!existsSync(db)) return [];
-  return JSON.parse(readFileSync(db, 'utf-8'));
+  const content = readFileSync(db, 'utf-8').trim();
+  if (!content) return [];
+  return JSON.parse(content);
 }
 
 function saveAll(snapshots: Snapshot[]): void {

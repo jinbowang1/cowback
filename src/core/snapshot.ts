@@ -1,5 +1,7 @@
 import { resolve } from 'node:path';
-import { cowCloneDir, getAllFiles } from './cow.js';
+import { realpathSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { cowCloneDir } from './cow.js';
 import { loadIgnorePatterns } from './ignore.js';
 import { addSnapshot, getSnapshotDir, autoClean } from './store.js';
 import type { Snapshot } from './types.js';
@@ -11,8 +13,8 @@ export function createSnapshot(
   label?: string,
   maxSnapshots = 20
 ): Snapshot {
-  const absPath = resolve(projectPath);
-  const id = `snap-${Date.now()}`;
+  const absPath = realpathSync(resolve(projectPath));
+  const id = `snap-${Date.now()}-${randomBytes(3).toString('hex')}`;
   const snapshotPath = getSnapshotDir(absPath, id);
   const ignorePatterns = loadIgnorePatterns(absPath);
 
