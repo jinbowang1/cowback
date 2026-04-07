@@ -75,7 +75,17 @@ async function main() {
     }
 
     case 'undo': {
-      const result = previewUndo(projectPath);
+      // Skip snapshots that are identical to current state
+      let result = previewUndo(projectPath);
+      while (result) {
+        const { preview } = result;
+        const hasChanges = preview.modified.length > 0 || preview.deleted.length > 0 || preview.added.length > 0;
+        if (hasChanges) break;
+        // No diff with this snapshot — move HEAD past it and try next
+        console.log(`[cowback] Skipping ${result.snapshot.id} (identical to current state)`);
+        executeUndo(projectPath); // moves HEAD
+        result = previewUndo(projectPath);
+      }
 
       if (!result) {
         console.log('[cowback] Already at oldest snapshot. Nothing to undo.');
@@ -102,11 +112,6 @@ async function main() {
         console.log(`  Remove:  ${preview.added.length} new files (created after snapshot)`);
         for (const f of preview.added.slice(0, 10)) console.log(`    +  ${f}`);
         if (preview.added.length > 10) console.log(`    ... and ${preview.added.length - 10} more`);
-      }
-
-      if (preview.modified.length === 0 && preview.deleted.length === 0 && preview.added.length === 0) {
-        console.log('  No changes to undo.');
-        break;
       }
 
       // Ask for confirmation
