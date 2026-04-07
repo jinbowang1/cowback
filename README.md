@@ -1,3 +1,5 @@
+[🇨🇳 中文文档](./README_CN.md)
+
 # 🐄 Cowback
 
 **The missing Ctrl+Z for AI Agents.**
