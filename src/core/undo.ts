@@ -1,9 +1,26 @@
-import { existsSync, rmSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { existsSync, rmSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { cowRestoreDir, getAllFiles } from './cow.js';
 import { loadIgnorePatterns } from './ignore.js';
-import { getSnapshots, getNthSnapshot } from './store.js';
+import { getNthSnapshot } from './store.js';
 import type { Snapshot, UndoPreview } from './types.js';
+
+/** Fast file comparison: first check size, then hash content */
+function filesEqual(pathA: string, pathB: string): boolean {
+  try {
+    const statA = statSync(pathA);
+    const statB = statSync(pathB);
+    // Different size = definitely different
+    if (statA.size !== statB.size) return false;
+    // Same size = compare hash
+    const hashA = createHash('md5').update(readFileSync(pathA)).digest('hex');
+    const hashB = createHash('md5').update(readFileSync(pathB)).digest('hex');
+    return hashA === hashB;
+  } catch {
+    return false;
+  }
+}
 
 /** Preview what undo will do, without actually doing it */
 export function previewUndo(projectPath: string, n = 1): { snapshot: Snapshot; preview: UndoPreview } | null {
@@ -14,22 +31,27 @@ export function previewUndo(projectPath: string, n = 1): { snapshot: Snapshot; p
   const currentFiles = new Set(getAllFiles(projectPath, projectPath, ignorePatterns));
   const snapshotFiles = new Set(getAllFiles(snapshot.snapshotPath, snapshot.snapshotPath));
 
-  const restored: string[] = [];
-  const removed: string[] = [];
-  const unchanged: string[] = [];
+  const restored: string[] = [];  // files that actually changed or were deleted
+  const removed: string[] = [];   // new files to remove
+  const unchanged: string[] = []; // files that haven't changed
 
-  // Files in snapshot: restore them
+  // Files in snapshot
   for (const f of snapshotFiles) {
     if (currentFiles.has(f)) {
-      // File exists in both — check if it changed (simple: assume changed)
-      restored.push(f);
+      const currentPath = join(projectPath, f);
+      const snapPath = join(snapshot.snapshotPath, f);
+      if (filesEqual(currentPath, snapPath)) {
+        unchanged.push(f);
+      } else {
+        restored.push(f);
+      }
     } else {
-      // File was deleted after snapshot — restore it
+      // File was deleted after snapshot
       restored.push(f);
     }
   }
 
-  // Files only in current: they were created after snapshot — remove them
+  // Files only in current: created after snapshot
   for (const f of currentFiles) {
     if (!snapshotFiles.has(f)) {
       removed.push(f);

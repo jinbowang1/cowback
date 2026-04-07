@@ -160,6 +160,7 @@ async function main() {
       }
       const { snapshot, preview } = result;
       console.log(`[cowback] Changes since: ${snapshot.id} (${formatAgo(snapshot.timestamp)})`);
+      console.log(`  ${preview.restored.length} modified/deleted, ${preview.removed.length} new, ${preview.unchanged.length} unchanged`);
       console.log('');
       for (const f of preview.restored) console.log(`  M  ${f}`);
       for (const f of preview.removed) console.log(`  +  ${f}`);
