@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createSnapshot } from '../src/core/snapshot.js';
-import { previewUndo, executeUndo } from '../src/core/undo.js';
+import { previewDiff, previewUndo, executeUndo } from '../src/core/undo.js';
 import { getHead } from '../src/core/store.js';
 
 import { realpathSync } from 'node:fs';
@@ -20,6 +20,45 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(TEST_DIR, { recursive: true, force: true });
+});
+
+describe('previewDiff', () => {
+  it('returns null when no snapshots exist', () => {
+    expect(previewDiff(TEST_DIR)).toBeNull();
+  });
+
+  it('shows changes since HEAD snapshot', () => {
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'original');
+    createSnapshot(TEST_DIR, 'manual', 'snap1', 999);
+
+    // Modify file — diff should detect it
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'changed');
+    const result = previewDiff(TEST_DIR);
+    expect(result).not.toBeNull();
+    expect(result!.preview.modified).toContain('a.txt');
+  });
+
+  it('works with only one snapshot', () => {
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'hello');
+    createSnapshot(TEST_DIR, 'manual', 'only one', 999);
+
+    writeFileSync(join(TEST_DIR, 'b.txt'), 'new');
+    const result = previewDiff(TEST_DIR);
+    expect(result).not.toBeNull();
+    expect(result!.preview.added).toContain('b.txt');
+    expect(result!.preview.unchanged).toContain('a.txt');
+  });
+
+  it('shows no changes when nothing changed', () => {
+    writeFileSync(join(TEST_DIR, 'a.txt'), 'same');
+    createSnapshot(TEST_DIR, 'manual', 'snap1', 999);
+
+    const result = previewDiff(TEST_DIR);
+    expect(result).not.toBeNull();
+    expect(result!.preview.modified).toHaveLength(0);
+    expect(result!.preview.deleted).toHaveLength(0);
+    expect(result!.preview.added).toHaveLength(0);
+  });
 });
 
 describe('previewUndo', () => {

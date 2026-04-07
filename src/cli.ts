@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { createSnapshot } from './core/snapshot.js';
-import { previewUndo, executeUndo } from './core/undo.js';
+import { previewDiff, previewUndo, executeUndo } from './core/undo.js';
 import { getSnapshots } from './core/store.js';
 import { startWatcher, getDaemonStatus, stopDaemon } from './daemon/watcher.js';
 import { initClaudeCode, initGeneric } from './init.js';
@@ -156,7 +156,7 @@ async function main() {
     }
 
     case 'diff': {
-      const result = previewUndo(projectPath);
+      const result = previewDiff(projectPath);
       if (!result) {
         console.log('[cowback] No snapshots.');
         break;
