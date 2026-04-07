@@ -1,0 +1,30 @@
+{
+  "name": "cowback",
+  "version": "0.1.0",
+  "description": "The missing Ctrl+Z for AI Agents. Zero-cost undo powered by Copy-on-Write.",
+  "type": "module",
+  "bin": {
+    "cowback": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest",
+    "benchmark": "tsx src/benchmark.ts"
+  },
+  "keywords": [
+    "ai", "agent", "undo", "rollback", "snapshot",
+    "copy-on-write", "cow", "clonefile", "claude-code",
+    "cursor", "openclaw", "safety"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "vitest": "^3.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
