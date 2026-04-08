@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { cowCloneDir } from './cow.js';
 import { loadIgnorePatterns } from './ignore.js';
 import { addSnapshot, getSnapshotDir, autoClean, setHead } from './store.js';
+import { log } from './logger.js';
 import type { Snapshot } from './types.js';
 
 /** Create a CoW snapshot of the project directory */
@@ -34,5 +35,6 @@ export function createSnapshot(
   autoClean(absPath, maxSnapshots);
   setHead(absPath, null); // reset HEAD to latest on new snapshot
 
+  log('snapshot', `${id} (${trigger}, ${fileCount} files${label ? ', ' + label : ''})`);
   return snapshot;
 }

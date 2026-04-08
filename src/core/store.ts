@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import type { Snapshot } from './types.js';
+import { log } from './logger.js';
 
 function getStorageDir(): string {
   return join(homedir(), '.cowback');
@@ -154,6 +155,9 @@ export function autoClean(projectPath: string, maxSnapshots: number): number {
   const toRemove = list.slice(0, list.length - maxSnapshots);
   for (const snap of toRemove) {
     removeSnapshot(snap.id);
+  }
+  if (toRemove.length > 0) {
+    log('clean', `removed ${toRemove.length} old snapshots (limit: ${maxSnapshots})`);
   }
   return toRemove.length;
 }

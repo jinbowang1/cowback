@@ -14,6 +14,7 @@ function releaseLock() {
   try { unlinkSync(LOCK_FILE); } catch {}
 }
 import { cowRestoreDir, getAllFiles } from './cow.js';
+import { log } from './logger.js';
 import { loadIgnorePatterns } from './ignore.js';
 import { moveHeadBack, getHead, getSnapshots, getHeadSnapshot } from './store.js';
 import type { Snapshot, UndoPreview } from './types.js';
@@ -130,5 +131,6 @@ export function executeUndo(projectPath: string, removeNewFiles = true): Snapsho
     releaseLock();
   }
 
+  log('undo', `→ ${snapshot.id}${snapshot.label ? ' (' + snapshot.label + ')' : ''}`);
   return snapshot;
 }

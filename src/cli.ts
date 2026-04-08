@@ -205,6 +205,22 @@ async function main() {
       break;
     }
 
+    case 'log': {
+      const { readFileSync, existsSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const { homedir } = await import('node:os');
+      const logFile = join(homedir(), '.cowback', 'cowback.log');
+      if (!existsSync(logFile)) {
+        console.log('[cowback] No logs yet.');
+        break;
+      }
+      const lines = readFileSync(logFile, 'utf-8').trim().split('\n');
+      const n = parseInt(args[0]) || 20;
+      const tail = lines.slice(-n);
+      for (const line of tail) console.log(line);
+      break;
+    }
+
     // ==================== Integration ====================
 
     case 'init': {
@@ -267,7 +283,8 @@ async function main() {
       console.log('  cowback init openclaw    Setup OpenClaw integration');
       console.log('  cowback init cursor      Setup Cursor integration');
       console.log('');
-      console.log('Benchmark:');
+      console.log('Debug:');
+      console.log('  cowback log [N]          Show last N log entries (default 20)');
       console.log('  cowback benchmark        Compare CoW vs file copy vs git');
       break;
     }
