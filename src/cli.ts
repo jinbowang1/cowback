@@ -90,16 +90,16 @@ async function main() {
     }
 
     case 'undo': {
-      // Skip snapshots that are identical to current state
+      // Skip at most one identical snapshot (daemon may have just captured current state)
       let result = previewUndo(projectPath);
-      while (result) {
+      if (result) {
         const { preview } = result;
         const hasChanges = preview.modified.length > 0 || preview.deleted.length > 0 || preview.added.length > 0;
-        if (hasChanges) break;
-        // No diff with this snapshot — move HEAD past it and try next
-        console.log(`[cowback] Skipping ${result.snapshot.id} (identical to current state)`);
-        executeUndo(projectPath); // moves HEAD
-        result = previewUndo(projectPath);
+        if (!hasChanges) {
+          console.log(`[cowback] Skipping ${result.snapshot.id} (identical to current state)`);
+          executeUndo(projectPath); // moves HEAD past the identical one
+          result = previewUndo(projectPath);
+        }
       }
 
       if (!result) {
