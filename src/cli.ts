@@ -41,9 +41,24 @@ async function main() {
         console.log(`Already running (PID ${status.pid}), watching: ${status.projectPath}`);
         break;
       }
-      console.log(`Protecting: ${projectPath}`);
-      console.log('Press Ctrl+C to stop.\n');
-      startWatcher(projectPath);
+
+      const foreground = args.includes('--foreground') || args.includes('-f');
+      if (foreground) {
+        console.log(`Protecting: ${projectPath}`);
+        console.log('Press Ctrl+C to stop.\n');
+        startWatcher(projectPath);
+      } else {
+        // Background mode: spawn detached child process
+        const { fork } = await import('node:child_process');
+        const child = fork(
+          process.argv[1],
+          ['on', '--foreground', `--path=${projectPath}`],
+          { detached: true, stdio: 'ignore', execArgv: process.execArgv }
+        );
+        child.unref();
+        console.log(`Protecting: ${projectPath}`);
+        console.log(`Daemon started (PID ${child.pid}). Run \`cowback off\` to stop.`);
+      }
       break;
     }
 
@@ -149,13 +164,15 @@ async function main() {
         console.log('[cowback] No snapshots.');
         break;
       }
-      console.log('ID                    Time                 Trigger  Files  Label');
-      console.log('─'.repeat(78));
-      for (const s of snaps) {
+      console.log('#   Time                 Trigger  Files  Label');
+      console.log('─'.repeat(60));
+      for (let i = 0; i < snaps.length; i++) {
+        const s = snaps[i];
+        const idx = String(i + 1).padStart(2);
         const time = formatTime(s.timestamp).padEnd(21);
         const tr = s.trigger.padEnd(9);
         const fc = String(s.fileCount).padEnd(7);
-        console.log(`${s.id.padEnd(22)}${time}${tr}${fc}${s.label ?? ''}`);
+        console.log(`${idx}  ${time}${tr}${fc}${s.label ?? ''}`);
       }
       break;
     }

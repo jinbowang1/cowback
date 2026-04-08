@@ -6,12 +6,24 @@
   "bin": {
     "cowback": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "README_CN.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "dev": "tsx src/cli.ts",
-    "test": "vitest",
+    "test": "vitest run",
     "benchmark": "tsx src/benchmark.ts"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jinbowang1/cowback.git"
+  },
+  "homepage": "https://github.com/jinbowang1/cowback",
   "keywords": [
     "ai", "agent", "undo", "rollback", "snapshot",
     "copy-on-write", "cow", "clonefile", "claude-code",
